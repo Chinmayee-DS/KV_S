@@ -1,5 +1,6 @@
 import threading
 import queue
+from typing_extensions import KeysView
 import requests
 import time
 import random
@@ -9,7 +10,7 @@ BASE_URL = 'http://127.0.0.1:8080'
 
 # Configure the number of threads and operations
 NUM_THREADS = 3
-OPS_PER_THREAD = 100
+OPS_PER_THREAD = 50
 PRINT_INTERVAL = 3  # Interval for printing intermediate results
 
 # Queues for managing operations and latencies
@@ -31,8 +32,17 @@ def kv_store_operation(op_type, key, value=None):
         response.raise_for_status()  # This will raise an error for non-2xx responses
         return True
     except Exception as e:
-        print(f"Error during {op_type} operation for key '{key}': {e}")
+        print(f"Error during {op_type} operation for key '{key}' and value '{value}': {e}")
         return False
+
+# kv_store_operation("set", "key_1", "val_1")
+# kv_store_operation("set", "key_2", "val_2")
+# kv_store_operation("set", "key_3", "val_3")
+# kv_store_operation("set", "key_4", "val_4")
+# kv_store_operation("set", "key_5", "val_5")
+# kv_store_operation("get", "key_5")
+# kv_store_operation("get", "key_1")
+# kv_store_operation("get", "key_2")
 
 # Worker thread function
 def worker_thread():
