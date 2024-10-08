@@ -10,7 +10,7 @@ BASE_URL = 'http://127.0.0.1:8080'
 
 # Configure the number of threads and operations
 NUM_THREADS = 3
-OPS_PER_THREAD = 50
+OPS_PER_THREAD = 100
 PRINT_INTERVAL = 3  # Interval for printing intermediate results
 
 # Queues for managing operations and latencies
@@ -34,15 +34,6 @@ def kv_store_operation(op_type, key, value=None):
     except Exception as e:
         print(f"Error during {op_type} operation for key '{key}' and value '{value}': {e}")
         return False
-
-# kv_store_operation("set", "key_1", "val_1")
-# kv_store_operation("set", "key_2", "val_2")
-# kv_store_operation("set", "key_3", "val_3")
-# kv_store_operation("set", "key_4", "val_4")
-# kv_store_operation("set", "key_5", "val_5")
-# kv_store_operation("get", "key_5")
-# kv_store_operation("get", "key_1")
-# kv_store_operation("get", "key_2")
 
 # Worker thread function
 def worker_thread():
@@ -77,15 +68,6 @@ def monitor_performance():
 
 # Populate the operation queue with mixed 'set' and 'get' requests
 for i in range(NUM_THREADS * OPS_PER_THREAD):
-    # if i % 2 == 0:
-    #     op_type = 'set'
-    #     key = f"key_{i}"
-    #     value = f"value_{i}"
-    # else:
-    #     op_type = 'get'
-    #     key = f"key_{i-1}"
-    #     value = None
-    # operations_queue.put((op_type, key, value))
     op_type = 'set' if i % 2 else 'get'
     key = f"key_{i}"
     value = f"value_{i}" if op_type == 'set' else None
