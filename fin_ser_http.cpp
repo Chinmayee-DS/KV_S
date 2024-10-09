@@ -59,6 +59,7 @@ struct Conn
     int fd = -1;
     int state = 0;
     char rbuf[4096] = {0};
+    // std::fill(std::begin(conn->rbuf), std::end(conn->rbuf), '\0');
     std::string response;
 };
 
@@ -78,13 +79,24 @@ std::string handle_request(Conn *conn, std::string request, std::unordered_map <
         {
             rcg++;
             std::cout << "rcg " << rcg << std::endl;
-            return "HTTP/1.1 200 " + it->second;
+            // std::cout << send(conn->fd, conn->response.c_str(), conn->response.length(), 0) << std::endl;
+            conn->response = "HTTP/1.1 200 " + it->second;
+            if(send(conn->fd, conn->response.c_str(), conn->response.length(), 0) < 0)
+            {
+                conn->state = 2;
+            }
+            return conn->response;
         }
         else
         {
             wcg++;
             std::cout << "key " << key << " wcg " << wcg << std::endl;
-            return "HTTP/1.1 404 Key not found";
+            conn->response = "HTTP/1.1 404 Key not found";
+            if(send(conn->fd, conn->response.c_str(), conn->response.length(), 0) < 0)
+            {
+                conn->state = 2;
+            }
+            return conn->response;
         }
     }
     else if (conn->fd != NULL && request[0] == 'P')
@@ -101,7 +113,12 @@ std::string handle_request(Conn *conn, std::string request, std::unordered_map <
         {
             wcp++;
             std::cout << "wcp no request only key " << key << " " << wcp << std::endl;
-            return "HTTP/1.1 400 Invalid request";
+            conn->response = "HTTP/1.1 400 Invalid request";
+            if(send(conn->fd, conn->response.c_str(), conn->response.length(), 0) < 0)
+            {
+                conn->state = 2;
+            }
+            return conn->response;
         }
         std::string body = request.substr(body_pos + 4);
 
@@ -110,7 +127,12 @@ std::string handle_request(Conn *conn, std::string request, std::unordered_map <
         {
             wcp++;
             std::cout << "wcp invalid json, no value thing key " << key << wcp << std::endl;
-            return "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nInvalid JSON";
+            conn->response = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nInvalid JSON";
+            if(send(conn->fd, conn->response.c_str(), conn->response.length(), 0) < 0)
+            {
+                conn->state = 2;
+            }
+            return conn->response;
         }
         size_t start = body.find("\"", value_pos + 8) + 1;
         size_t end = body.find("\"", start);
@@ -119,11 +141,21 @@ std::string handle_request(Conn *conn, std::string request, std::unordered_map <
         kv_store[key] = value;
         rcp++;
         std::cout << "key " << key << " value " << value << " rcp " << rcp << std::endl;
-        return "HTTP/1.1 200 OK";
+        conn->response = "HTTP/1.1 200 OK";
+        if(send(conn->fd, conn->response.c_str(), conn->response.length(), 0) < 0)
+        {
+            conn->state = 2;
+        }
+        return conn->response;
     }
     else
     {
-        return "HTTP/1.1 405 Method Not Allowed\r\nContent-Type: text/plain\r\n\r\nMethod not allowed";
+        conn->response = "HTTP/1.1 405 Method Not Allowed\r\nContent-Type: text/plain\r\n\r\nMethod not allowed";
+        if(send(conn->fd, conn->response.c_str(), conn->response.length(), 0) < 0)
+        {
+            conn->state = 2;
+        }
+        return conn->response;
     }
 }
 
@@ -238,6 +270,8 @@ int main()
                     {
                         std::cout << "is it here " << std::endl;
                         close(conn->fd);
+                        // conn->rbuf = {0};
+                        std::fill(std::begin(conn->rbuf), std::end(conn->rbuf), '\0');
                         con[conn->fd] = NULL;
                         free(conn);
                         continue;
@@ -247,7 +281,7 @@ int main()
                         std::string request(conn->rbuf);
                         conn->response = handle_request(conn, conn->rbuf, kv_store);
                         std::cout << conn->response << std::endl;
-                        std::cout << send(conn->fd, conn->response.c_str(), conn->response.length(), 0) << std::endl;
+                        // std::cout << send(conn->fd, conn->response.c_str(), conn->response.length(), 0) << std::endl;
 
                         conn->state = 1;
                     }
@@ -256,6 +290,16 @@ int main()
                 {
                     conn->state = 0;
                     close(conn->fd);
+                    // conn->rbuf = {0};
+                    std::fill(std::begin(conn->rbuf), std::end(conn->rbuf), '\0');
+                    con[conn->fd] = NULL;
+                    free(conn);
+                }
+                if(conn->state == 2)
+                {
+                    close(conn->fd);
+                    // conn->rbuf = {0};
+                    std::fill(std::begin(conn->rbuf), std::end(conn->rbuf), '\0');
                     con[conn->fd] = NULL;
                     free(conn);
                 }
